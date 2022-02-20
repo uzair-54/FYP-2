@@ -1,4 +1,43 @@
 import cv2
+import getKeyPress as kp
+
+####################################
+####### CONSTANT VARIABLES #########
+####################################
+
+width, height = 800, 600
+deadZone = 125
+
+x1 = int(width / 2) - deadZone
+x2 = int(width / 2) + deadZone
+y1 = int(height / 2) - deadZone
+y2 = int(height / 2) + deadZone
+
+fbRange = [60000, 85000]
+pId = [0.4, 0.4, 0]
+pError = 0
+
+####################################
+########### FUNCTIONS ##############
+####################################
+
+def putDataOnFrame(img, drone):
+    cv2.putText(img, "HEIGHT " + str(drone.get_height()), (30, 35), cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 125, 105), 2)
+    cv2.putText(img, "YAW " + str(drone.get_yaw()), (30, 65), cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 125, 105), 1)
+    cv2.putText(img, "PITCH " + str(drone.get_pitch()), (30, 95), cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 125, 105), 2)
+    cv2.putText(img, "BATTERY " + str(drone.get_battery()), (30, 125), cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 125, 105), 2)
+    cv2.putText(img, "TEMP " + str(drone.get_temperature()), (30, 155), cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 125, 105), 2)
+
+    return img
+
+def display(img):
+    cv2.line(img, (x1, 0), (x1, height), (255, 255, 0), 3)
+    cv2.line(img, (x2, 0), (x2, height), (255, 255, 0), 3)
+
+    cv2.line(img, (0, y1), (width, y1), (255, 255, 0), 3)
+    cv2.line(img, (0, y2), (width, y2), (255, 255, 0), 3)
+
+    return img
 
 def getFileNames():
     classFile = 'additional Files//coco.names'
@@ -11,36 +50,82 @@ def nnSetup():
     weightsPath = 'additional Files//frozen_inference_graph.pb'
 
     net = cv2.dnn_DetectionModel(weightsPath, configPath)
+    net.setInputSize(320, 320)
+    net.setInputScale(0.5 / 127.5)
+    net.setInputMean((127.5, 127.5, 127.5))
+    net.setInputSwapRB(True)
 
     return net
 
-Known_distance = 76.2
-knownWidth = 14.3
-def focalLengthFinder(measured_distance, real_width, width_in_rf_image):
-    focal_length = (width_in_rf_image * measured_distance) / real_width
-    return focal_length
+def findFace(img):
+    cx, cy = 0, 0
 
+    faceCascade = cv2.CascadeClassifier("additional Files//haarcascade_frontalface_default.xml")
+    imgGray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    faces = faceCascade.detectMultiScale(imgGray, 1.2, 8)
 
-def distanceFinder(Focal_Length, real_face_width, face_width_in_frame):
-    distance = (real_face_width * Focal_Length) / face_width_in_frame
-    return distance
+    myFaceC = []
+    myFaceArea = []
 
-face_detector = cv2.CascadeClassifier("additional Files//haarcascade_frontalface_default.xml")
+    for(x,y,w,h) in faces:
+        cv2.rectangle(img,(x, y),(x + w, y + h), (0, 255, 0), 3)
+        cx = x + w //2
+        cy = y + h //2
+        area = w * h
+        cv2.circle(img,(cx, cy), 5, (0,0,255),cv2.FILLED)
 
-def faceData(image):
-    face_width = 0
+        myFaceC.append([cx,cy])
+        myFaceArea.append(area)
 
-    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    if len(myFaceC) != 0:
+        i = myFaceArea.index(max(myFaceArea))
+        return img, [myFaceC[i], myFaceArea[i]], cx, cy
+    else:
+        return img, [[0, 0], 0], cx, cy
 
-    faces = face_detector.detectMultiScale(gray_image, 1.3, 5)
+def getKeyboardInput(drone):
+    flag = False
 
-    for (x, y, h, w) in faces:
-        face_width = w
+    lr, fb, ud, yv = 0, 0, 0, 0
+    speed = 75
 
-    return face_width
+    if kp.getKey("LEFT"):
+        lr = -speed
 
-ref_image = cv2.imread("pics//bb.jpg")
+    elif kp.getKey("RIGHT"):
+        lr = speed
 
-ref_image_face_width = faceData(ref_image)
+    if kp.getKey("UP"):
+        fb = speed
 
-focallengthFound = focalLengthFinder(Known_distance, knownWidth, ref_image_face_width)
+    elif kp.getKey("DOWN"):
+        fb = -speed
+
+    if kp.getKey("w"):
+        ud = speed
+
+    elif kp.getKey("s"):
+        ud = -speed
+
+    if kp.getKey("a"):
+        yv = -speed
+
+    elif kp.getKey("d"):
+        yv = speed
+
+    if kp.getKey("q"):
+        drone.land()
+        # pass
+        # sleep(3)
+
+    if kp.getKey("e"):
+        drone.takeoff()
+        # pass
+
+    if kp.getKey("SPACE"):
+        flag = True
+
+    if kp.getKey("n"):
+        flag = False
+
+    return [lr, fb, ud, yv], flag

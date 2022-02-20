@@ -13,10 +13,6 @@ cap.set(4,720)
 classNames = hf.getFileNames()
 
 net = hf.nnSetup()
-net.setInputSize(320, 320)
-net.setInputScale(0.5 / 127.5)
-net.setInputMean((127.5, 127.5, 127.5))
-net.setInputSwapRB(True)
 pTime = time.time()
 
 while True:
