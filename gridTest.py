@@ -1,67 +1,33 @@
 import cv2
-import numpy as np
+import mediapipe as mp
 import time
 import helperFunctions as hf
 
-thres = 0.58  # Threshold to detect object
-nms_threshold = 0.15
 
-classNames = hf.getFileNames()
-
-net = hf.nnSetup()
-pTime = time.time()
-
-frameWidth = hf.width
-frameHeight = hf.height
+pTime = 0
 
 cap = cv2.VideoCapture(0)
 
-def faceTrack(drone, info, w, pId, pError):
 
-    area = info[1]
-    x, y = info[0]
-    fb = 0
-    error = x - w // 2
-    speed = pId[0] * error + pId[1] * (error - pError)
-    speed = int(np.clip(speed, -100, 100))
-
-
-    if area > hf.fbRange[0] and area < hf.fbRange[1]:
-        fb = 0
-
-    elif area > hf.fbRange[1]:
-        fb = -35
-
-    elif area < hf.fbRange[0] and area != 0:
-        fb = 35
-
-    if x == 0:
-        speed = 0
-        error = 0
-
-    drone.send_rc_control(0, fb, 0, speed)
-    return error
-
+mpFace = mp.solutions.face_detection
+faceDet = mpFace.FaceDetection()
 
 while True:
 
     success, img = cap.read()
-    img = cv2.resize(img,(frameWidth,frameHeight))
-    _, g, x, y = hf.findFace(img)
+    info = hf.findFace(img, faceDet)
 
-    if x < hf.x1 and x != 0:
-        print("go left", time.ctime())
+    area = info[1]
+    x = info[0][0]
+    y = info[0][1]
 
-    if x > hf.x2 and x != 0:
-        print("go right", time.ctime())
+    print("area", area, "x", x, "y", y)
+    cTime = time.time()
+    fps = 1 / (cTime - pTime)
 
-    if y < hf.y1 and y != 0:
-        print("go up", time.ctime())
+    pTime = cTime
+    cv2.putText(img, f'FPS: {int(fps)}', (20, 70), cv2.FONT_HERSHEY_PLAIN, 5, (0, 0, 255), 5)
 
-    if y > hf.y2 and y != 0:
-        print("go down", time.ctime())
-
-    hf.display(img)
     cv2.imshow("Output", img)
     cv2.waitKey(1)
 

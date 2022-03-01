@@ -57,31 +57,29 @@ def nnSetup():
 
     return net
 
-def findFace(img):
-    cx, cy = 0, 0
+def findFace(img, faceDetector):
 
-    faceCascade = cv2.CascadeClassifier("additional Files//haarcascade_frontalface_default.xml")
-    imgGray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-    faces = faceCascade.detectMultiScale(imgGray, 1.2, 8)
+    ih, iw, ic = img.shape
+    RGBimg = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    results = faceDetector.process(RGBimg)
 
-    myFaceC = []
-    myFaceArea = []
+    if results.detections:
+        # for detection in results.detections:
+        x = int(results.detections[0].location_data.relative_bounding_box.xmin * iw)
+        y = int(results.detections[0].location_data.relative_bounding_box.ymin * ih)
+        w = int(results.detections[0].location_data.relative_bounding_box.width * iw)
+        h = int(results.detections[0].location_data.relative_bounding_box.height * ih)
 
-    for(x,y,w,h) in faces:
-        cv2.rectangle(img,(x, y),(x + w, y + h), (0, 255, 0), 3)
-        cx = x + w //2
-        cy = y + h //2
+        cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 3)
+
+        cx = x + w // 2
+        cy = y + h // 2
         area = w * h
-        cv2.circle(img,(cx, cy), 5, (0,0,255),cv2.FILLED)
+        cv2.circle(img, (cx, cy), 5, (0, 0, 255), cv2.FILLED)
 
-        myFaceC.append([cx,cy])
-        myFaceArea.append(area)
-
-    if len(myFaceC) != 0:
-        i = myFaceArea.index(max(myFaceArea))
-        return img, [myFaceC[i], myFaceArea[i]], cx, cy
+        return [[x, y], area]
     else:
-        return img, [[0, 0], 0], cx, cy
+        return [[0, 0], 0]
 
 def getKeyboardInput(drone):
     flag = False

@@ -1,16 +1,18 @@
 import cv2
 from djitellopy import tello
 import time
-import numpy as np
+import mediapipe as mp
 import getKeyPress as kp
 import helperFunctions as hf
 
+flag = False
 frameWidth, frameHeight = hf.width, hf.height
 
 fbRange = [60000, 85000]
-pId = [0.4, 0.4, 0]
-pError = 0
 
+
+mpFace = mp.solutions.face_detection
+faceDet = mpFace.FaceDetection()
 cap = cv2.VideoCapture(0)
 
 drone = tello.Tello()
@@ -18,16 +20,96 @@ drone.connect()
 kp.init()
 drone.streamon()
 
-# pTime = time.time()
+pTime = 0
+
+def faceTrackUserDefined(drone, info):
+
+    fb = 0
+    rl = 0
+    ud = 0
+
+    area = info[1]
+    x = info[0][0]
+    y = info[0][1]
+
+    if hf.fbRange[0] < area < hf.fbRange[1]:
+        fb = 0
+
+    if area > hf.fbRange[1]:
+        fb = -20
+
+    if area < hf.fbRange[0] and area != 0:
+        fb = 20
+
+    if x < hf.x1 and x != 0:
+        rl = -20
+
+    if x > hf.x2 and x != 0:
+        rl = 20
+
+    if y < hf.y1 and y != 0:
+        ud = -20
+
+    if y > hf.y2 and y != 0:
+        ud = 20
+
+    drone.send_rc_control(rl, fb, ud, 0)
+    return fb
+
+def getKeyboardInput(drone):
+    global flag
+    lr, fb, ud, yv = 0, 0, 0, 0
+    speed = 75
+
+    if kp.getKey("LEFT"):
+        lr = -speed
+
+    elif kp.getKey("RIGHT"):
+        lr = speed
+
+    if kp.getKey("UP"):
+        fb = speed
+
+    elif kp.getKey("DOWN"):
+        fb = -speed
+
+    if kp.getKey("w"):
+        ud = speed
+
+    elif kp.getKey("s"):
+        ud = -speed
+
+    if kp.getKey("a"):
+        yv = -speed
+
+    elif kp.getKey("d"):
+        yv = speed
+
+    if kp.getKey("q"):
+        drone.land()
+        # pass
+        # sleep(3)
+
+    if kp.getKey("e"):
+        drone.takeoff()
+        # pass
+
+    if kp.getKey("SPACE"):
+        flag = True
+
+    if kp.getKey("n"):
+        flag = False
+
+    return [lr, fb, ud, yv], flag
 
 def faceTrack(drone, info, w, pId, pError):
 
     area = info[1]
     x, y = info[0]
     fb = 0
-    error = x - w // 2
-    speed = pId[0] * error + pId[1] * (error - pError)
-    speed = int(np.clip(speed, -100, 100))
+    # error = x - w // 2
+    # speed = pId[0] * error + pId[1] * (error - pError)
+    # speed = int(np.clip(speed, -100, 100))
 
 
     if area > fbRange[0] and area < fbRange[1]:
@@ -39,33 +121,43 @@ def faceTrack(drone, info, w, pId, pError):
     elif area < fbRange[0] and area != 0:
         fb = 35
 
-    if x == 0:
-        speed = 0
-        error = 0
+    # if x == 0:
+    #     speed = 0
+    #     error = 0
 
-    drone.send_rc_control(0, fb, 0, speed)
-    return error
+    drone.send_rc_control(0, fb, 0, 0)
+    return fb
+
 
 while True:
 
     img = drone.get_frame_read().frame
-    vals, flag = hf.getKeyboardInput(drone)
+    vals, flag = getKeyboardInput(drone)
     img = cv2.resize(img, (frameWidth, frameHeight))
-    img, info, x, y = hf.findFace(img)
+    info = hf.findFace(img, faceDet)
     # print(info, "INFO")
 
     # print(vals, flag)
     if flag:
-        # img = cv2.resize(img, (w, h))
-        # img, info = findFace(img)
-        pError = faceTrack(drone, info, frameWidth, pId, pError)
+
+        speed = faceTrackUserDefined(drone, info)
+        if speed > 0:
+            cv2.putText(img, "FORWARD", (hf.width // 2, 40), cv2.FONT_HERSHEY_COMPLEX, 0.8, (0, 0, 255), 2)
+
+        else:
+            cv2.putText(img, "BACKWO", (hf.width // 2, 40), cv2.FONT_HERSHEY_COMPLEX, 0.8, (0, 0, 255), 2)
+
         print(2)
 
     else:
         drone.send_rc_control(vals[0], vals[1], vals[2], vals[3])
         time.sleep(0.05)
         print(1)
+    cTime = time.time()
+    fps = 1 / (cTime - pTime)
 
-    img = hf.putDataOnFrame()
+    pTime = cTime
+    cv2.putText(img, f'FPS: {int(fps)}', (20, 70), cv2.FONT_HERSHEY_PLAIN, 5, (0, 0, 255), 5)
+    img = hf.putDataOnFrame(img, drone)
     cv2.imshow("Drone Cam", img)
     cv2.waitKey(1)
