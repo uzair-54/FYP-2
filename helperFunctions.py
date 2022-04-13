@@ -5,15 +5,15 @@ import getKeyPress as kp
 ####### CONSTANT VARIABLES #########
 ####################################
 
-width, height = 800, 600
-deadZone = 125
+width, height = 720, 480#360, 240#800, 600
+deadZone = 100
 
 x1 = int(width / 2) - deadZone
 x2 = int(width / 2) + deadZone
 y1 = int(height / 2) - deadZone
 y2 = int(height / 2) + deadZone
 
-fbRange = [60000, 85000]
+fbRange = [15000, 53500]#[60000, 85000]
 pId = [0.4, 0.4, 0]
 pError = 0
 
@@ -22,20 +22,15 @@ pError = 0
 ####################################
 
 def putDataOnFrame(img, drone):
-    cv2.putText(img, "HEIGHT " + str(drone.get_height()), (30, 35), cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 125, 105), 2)
-    cv2.putText(img, "YAW " + str(drone.get_yaw()), (30, 65), cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 125, 105), 1)
-    cv2.putText(img, "PITCH " + str(drone.get_pitch()), (30, 95), cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 125, 105), 2)
     cv2.putText(img, "BATTERY " + str(drone.get_battery()), (30, 125), cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 125, 105), 2)
-    cv2.putText(img, "TEMP " + str(drone.get_temperature()), (30, 155), cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 125, 105), 2)
-
     return img
 
 def display(img):
-    cv2.line(img, (x1, 0), (x1, height), (255, 255, 0), 3)
-    cv2.line(img, (x2, 0), (x2, height), (255, 255, 0), 3)
+    cv2.line(img, (x1, 0), (x1, height), (255, 255, 125), 3)
+    cv2.line(img, (x2, 0), (x2, height), (255, 55, 0), 3)
 
-    cv2.line(img, (0, y1), (width, y1), (255, 255, 0), 3)
-    cv2.line(img, (0, y2), (width, y2), (255, 255, 0), 3)
+    cv2.line(img, (0, y1), (width, y1), (255, 25, 0), 3)
+    cv2.line(img, (0, y2), (width, y2), (255, 200, 0), 3)
 
     return img
 

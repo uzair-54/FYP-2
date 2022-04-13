@@ -8,11 +8,11 @@ import helperFunctions as hf
 flag = False
 frameWidth, frameHeight = hf.width, hf.height
 
-fbRange = [60000, 85000]
+fbRange = [15000, 53500]
 
 
 mpFace = mp.solutions.face_detection
-faceDet = mpFace.FaceDetection()
+faceDet = mpFace.FaceDetection(min_detection_confidence=0.7)
 cap = cv2.VideoCapture(0)
 
 drone = tello.Tello()
@@ -36,16 +36,16 @@ def faceTrackUserDefined(drone, info):
         fb = 0
 
     if area > hf.fbRange[1]:
-        fb = -20
+        fb = -45
 
     if area < hf.fbRange[0] and area != 0:
         fb = 20
 
     if x < hf.x1 and x != 0:
-        rl = -20
+        rl = -30 # positive number will go to right
 
     if x > hf.x2 and x != 0:
-        rl = 20
+        rl = 30
 
     if y < hf.y1 and y != 0:
         ud = -20
@@ -53,8 +53,10 @@ def faceTrackUserDefined(drone, info):
     if y > hf.y2 and y != 0:
         ud = 20
 
-    drone.send_rc_control(rl, fb, ud, 0)
-    return fb
+    drone.send_rc_control(0, fb, 0, 0)
+    # drone.send_rc_control(rl, 0, 0, 0)
+
+    return rl
 
 def getKeyboardInput(drone):
     global flag
@@ -102,50 +104,26 @@ def getKeyboardInput(drone):
 
     return [lr, fb, ud, yv], flag
 
-def faceTrack(drone, info, w, pId, pError):
-
-    area = info[1]
-    x, y = info[0]
-    fb = 0
-    # error = x - w // 2
-    # speed = pId[0] * error + pId[1] * (error - pError)
-    # speed = int(np.clip(speed, -100, 100))
-
-
-    if area > fbRange[0] and area < fbRange[1]:
-        fb = 0
-
-    elif area > fbRange[1]:
-        fb = -35
-
-    elif area < fbRange[0] and area != 0:
-        fb = 35
-
-    # if x == 0:
-    #     speed = 0
-    #     error = 0
-
-    drone.send_rc_control(0, fb, 0, 0)
-    return fb
-
-
 while True:
 
     img = drone.get_frame_read().frame
     vals, flag = getKeyboardInput(drone)
     img = cv2.resize(img, (frameWidth, frameHeight))
     info = hf.findFace(img, faceDet)
+    # print(info[1])
     # print(info, "INFO")
 
     # print(vals, flag)
     if flag:
 
         speed = faceTrackUserDefined(drone, info)
+        time.sleep(0.05)
+
         if speed > 0:
-            cv2.putText(img, "FORWARD", (hf.width // 2, 40), cv2.FONT_HERSHEY_COMPLEX, 0.8, (0, 0, 255), 2)
+            cv2.putText(img, "RIGHT", (hf.width // 2, 40), cv2.FONT_HERSHEY_COMPLEX, 0.8, (0, 0, 255), 2)
 
         else:
-            cv2.putText(img, "BACKWO", (hf.width // 2, 40), cv2.FONT_HERSHEY_COMPLEX, 0.8, (0, 0, 255), 2)
+            cv2.putText(img, "LEFT", (hf.width // 2, 40), cv2.FONT_HERSHEY_COMPLEX, 0.8, (0, 0, 255), 2)
 
         print(2)
 

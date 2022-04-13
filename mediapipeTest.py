@@ -10,13 +10,12 @@ faceDet = mpFace.FaceDetection()
 
 
 def findFace(img, faceDetector):
-
     ih, iw, ic = img.shape
     RGBimg = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     results = faceDetector.process(RGBimg)
 
     if results.detections:
-        # for detection in results.detections:
+
         x = int(results.detections[0].location_data.relative_bounding_box.xmin * iw)
         y = int(results.detections[0].location_data.relative_bounding_box.ymin * ih)
         w = int(results.detections[0].location_data.relative_bounding_box.width * iw)
@@ -34,19 +33,14 @@ def findFace(img, faceDetector):
         return [[0, 0], 0]
 
 
-
 while True:
-
     _, img = cap.read()
-    # img.flags.writeable = False
-
-    findFace(img,faceDet)
-    # print(results)
+    findFace(img, faceDet)
 
     cTime = time.time()
     fps = 1 / (cTime - pTime)
 
     pTime = cTime
-    cv2.putText(img,f'FPS: {int(fps)}', (20, 70), cv2.FONT_HERSHEY_PLAIN, 5, (0, 0, 255), 5)
+    cv2.putText(img, f'FPS: {int(fps)}', (20, 70), cv2.FONT_HERSHEY_PLAIN, 5, (0, 0, 255), 5)
     cv2.imshow("img", img)
     cv2.waitKey(1)
